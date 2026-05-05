@@ -20,7 +20,9 @@ on:
         default: app.py
 
       test_file:
-        description: "Test File (default auto-picked by branch)"
+        description: |
+          Test File — 'auto' picks the default for your branch:
+          main=test_math.py | dev=test_large.py | feature/test=test_decimal.py
         type: choice
         options:
           - auto
@@ -58,28 +60,30 @@ jobs:
           SELECTED="${{ github.event.inputs.test_file }}"
 
           if [ "$SELECTED" == "auto" ]; then
-            if [ "$BRANCH" == "main" ]; then
-              TEST_FILE="test_math.py"
-            elif [ "$BRANCH" == "dev" ]; then
-              TEST_FILE="test_large.py"
-            elif [ "$BRANCH" == "feature/test" ]; then
-              TEST_FILE="test_decimal.py"
-            else
-              TEST_FILE="test_app.py"
-            fi
+            case "$BRANCH" in
+              main)         TEST_FILE="test_math.py" ;;
+              dev)          TEST_FILE="test_large.py" ;;
+              feature/test) TEST_FILE="test_decimal.py" ;;
+              *)            TEST_FILE="test_app.py" ;;
+            esac
+            echo "ℹ️  Auto mode: branch '$BRANCH' → resolved to '$TEST_FILE'"
           else
             TEST_FILE="$SELECTED"
+            echo "ℹ️  Manual override: using '$TEST_FILE'"
           fi
 
-          echo "Resolved test file: $TEST_FILE"
           echo "test_file=$TEST_FILE" >> $GITHUB_OUTPUT
 
       - name: Check test file exists in branch
         run: |
-          if [ ! -f "${{ steps.resolve.outputs.test_file }}" ]; then
-            echo "ERROR: ${{ steps.resolve.outputs.test_file }} does not exist in branch '${{ github.event.inputs.branch }}'"
+          TEST="${{ steps.resolve.outputs.test_file }}"
+          if [ ! -f "$TEST" ]; then
+            echo "❌ ERROR: '$TEST' does not exist in branch '${{ github.event.inputs.branch }}'"
+            echo "   Available test files in this branch:"
+            ls test_*.py 2>/dev/null || echo "   (none found)"
             exit 1
           fi
+          echo "✅ Found: $TEST"
 
       - name: Always run test_app.py (common baseline)
         run: pytest test_app.py -v
