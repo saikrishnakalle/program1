@@ -4,49 +4,85 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Select branch"
+        description: "Select Branch"
         type: choice
         options:
           - main
           - dev
           - feature/test
-        default: dev
+        default: main
 
       program_file:
-        description: "Select Program File"
+        description: "Program File"
         type: choice
         options:
           - app.py
         default: app.py
 
       test_file:
-        description: "Select Test File"
+        description: "Test File (default auto-picked by branch)"
         type: choice
         options:
+          - auto
           - test_app.py
           - test_math.py
-        default: test_app.py
+          - test_large.py
+          - test_decimal.py
+        default: auto
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - run: pip install pytest
+      - name: Install dependencies
+        run: pip install pytest
 
-      - name: Run selected file
-        run: python ${{ github.event.inputs.file_to_run }}
+      - name: Run program file
+        run: python ${{ github.event.inputs.program_file }}
 
-      - name: Run pytest (for test file)
-        if: ${{ github.event.inputs.file_to_run == 'test_app.py' }}
-        run: pytest test_app.py
+      - name: Resolve test file for branch
+        id: resolve
+        run: |
+          BRANCH="${{ github.event.inputs.branch }}"
+          SELECTED="${{ github.event.inputs.test_file }}"
 
-      
+          if [ "$SELECTED" == "auto" ]; then
+            if [ "$BRANCH" == "main" ]; then
+              TEST_FILE="test_math.py"
+            elif [ "$BRANCH" == "dev" ]; then
+              TEST_FILE="test_large.py"
+            elif [ "$BRANCH" == "feature/test" ]; then
+              TEST_FILE="test_decimal.py"
+            else
+              TEST_FILE="test_app.py"
+            fi
+          else
+            TEST_FILE="$SELECTED"
+          fi
+
+          echo "Resolved test file: $TEST_FILE"
+          echo "test_file=$TEST_FILE" >> $GITHUB_OUTPUT
+
+      - name: Check test file exists in branch
+        run: |
+          if [ ! -f "${{ steps.resolve.outputs.test_file }}" ]; then
+            echo "ERROR: ${{ steps.resolve.outputs.test_file }} does not exist in branch '${{ github.event.inputs.branch }}'"
+            exit 1
+          fi
+
+      - name: Always run test_app.py (common baseline)
+        run: pytest test_app.py -v
+
+      - name: Run branch-specific test file
+        run: pytest ${{ steps.resolve.outputs.test_file }} -v
