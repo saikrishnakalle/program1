@@ -24,6 +24,7 @@ on:
         type: choice
         options:
           - test_app.py
+          - test_math.py
         default: test_app.py
 
 jobs:
