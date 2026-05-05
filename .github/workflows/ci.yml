@@ -4,38 +4,36 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to run code from (dev/feature/main)"
+        description: "Branch to run"
         required: true
         default: "dev"
 
-      run_file:
-        description: "File to run"
-        required: false
-        default: "app.py"
+      file_to_run:
+        description: "Select file (app + test files)"
+        type: choice
+        options:
+          - app.py
+          - test_app.py
+        default: app.py
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout selected branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Set file
-        run: echo "FILE=${{ github.event.inputs.run_file }}" >> $GITHUB_ENV
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
-        run: pip install pytest
+      - run: pip install pytest
 
       - name: Run selected file
-        run: python $FILE
+        run: python ${{ github.event.inputs.file_to_run }}
 
-      - name: Run tests
-        run: pytest tests/ || echo "No tests found"
+      - name: Run pytest (for test file)
+        if: ${{ github.event.inputs.file_to_run == 'test_app.py' }}
+        run: pytest test_app.py
