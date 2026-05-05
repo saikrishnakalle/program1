@@ -48,3 +48,15 @@ jobs:
       - name: Run pytest (for test file)
         if: ${{ github.event.inputs.file_to_run == 'test_app.py' }}
         run: pytest test_app.py
+
+      - name: Select default test case by branch
+        run: |
+          if [ "${{ github.event.inputs.branch }}" = "main" ]; then
+            echo "TEST_FILE=test_math.py" >> $GITHUB_ENV
+
+          elif [ "${{ github.event.inputs.branch }}" = "dev" ]; then
+            echo "TEST_FILE=test_large.py" >> $GITHUB_ENV
+
+          else
+            echo "TEST_FILE=test_decimal.py" >> $GITHUB_ENV
+          fi
