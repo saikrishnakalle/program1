@@ -12,13 +12,19 @@ on:
           - feature/test
         default: dev
 
-      file_to_run:
-        description: "Select file (app + test files)"
+      program_file:
+        description: "Select Program File"
         type: choice
         options:
           - app.py
-          - test_app.py
         default: app.py
+
+      test_file:
+        description: "Select Test File"
+        type: choice
+        options:
+          - test_app.py
+        default: test_app.py
 
 jobs:
   build:
