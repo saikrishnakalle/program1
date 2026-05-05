@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to run"
-        required: true
-        default: "dev"
+        description: "Select branch"
+        type: choice
+        options:
+          - main
+          - dev
+          - feature/test
+        default: dev
 
       file_to_run:
         description: "Select file (app + test files)"
