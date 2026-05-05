@@ -1,10 +1,13 @@
 name: Dynamic CI
 
 on:
-  push:
-    branches: [main, dev, feature/*]
   workflow_dispatch:
     inputs:
+      branch:
+        description: "Branch to run code from (dev/feature/main)"
+        required: true
+        default: "dev"
+
       run_file:
         description: "File to run"
         required: false
@@ -13,15 +16,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
 
-      - run: echo "FILE=${{ github.event.inputs.run_file || 'app.py' }}" >> $GITHUB_ENV
+      - name: Set file
+        run: echo "FILE=${{ github.event.inputs.run_file }}" >> $GITHUB_ENV
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - run: pip install pytest
-      - run: python $FILE
-      - run: pytest tests/ || echo "No tests"
+      - name: Install dependencies
+        run: pip install pytest
+
+      - name: Run selected file
+        run: python $FILE
+
+      - name: Run tests
+        run: pytest tests/ || echo "No tests found"
